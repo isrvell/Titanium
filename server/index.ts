@@ -25,27 +25,37 @@ app.use(
 );
 app.use("*", logger());
 
-// ─── Auth routes (Better Auth handles these) ──────────
-
-app.on(["POST", "GET"], "/api/auth/**", (c) => auth.handler(c.req.raw));
+// ─── Auth routes (Better Auth) ────────────────────────
+// NOTE: `app.on(..., "/api/auth/**", ...)` is unreliable with hono 4.13.13
+// when param routes are also mounted (RegExpRouter bug — the wildcard route
+// stops matching). Registering each path depth explicitly (`*` and `*/*`)
+// is deterministic. Better Auth endpoints never go deeper than 2 segments.
+const handleAuth = (c: { req: { raw: Request } }) => auth.handler(c.req.raw);
+app.on(["POST", "GET"], "/api/auth/*", handleAuth);
+app.on(["POST", "GET"], "/api/auth/*/*", handleAuth);
 
 // ─── Health check ─────────────────────────────────────
 
 app.get("/api/health", (c) => c.json({ status: "ok", ts: Date.now() }));
 
 // ─── Protected API routes ─────────────────────────────
+// requireAuth is scoped per resource prefix (NOT via a wildcard `api.use("*")`,
+// which hono would also apply to /api/auth/* routes).
 
-const api = new Hono<AuthEnv>();
-api.use("*", requireAuth);
+const protectedResources: Array<[string, Hono<AuthEnv>]> = [
+  ["/workspaces", workspaces],
+  ["/projects", projects],
+  ["/tasks", tasks],
+  ["/comments", comments],
+  ["/notifications", notifications],
+  ["/tags", tags],
+];
 
-api.route("/workspaces", workspaces);
-api.route("/projects", projects);
-api.route("/tasks", tasks);
-api.route("/comments", comments);
-api.route("/notifications", notifications);
-api.route("/tags", tags);
-
-app.route("/api", api);
+for (const [prefix, router] of protectedResources) {
+  app.use(`/api${prefix}`, requireAuth);
+  app.use(`/api${prefix}/*`, requireAuth);
+  app.route(`/api${prefix}`, router);
+}
 
 // ─── Start server ─────────────────────────────────────
 
