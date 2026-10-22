@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { signUp } from "@/lib/auth-client";
+import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +40,12 @@ export function SignupPage() {
       if (res.error) {
         setError(res.error.message ?? "Could not create account");
       } else {
+        // INVITE FIX: consume any pending workspace invitations for this email
+        try {
+          await api.post("/workspaces/accept-invites", {});
+        } catch {
+          // Non-blocking: the user can still use the app
+        }
         navigate("/");
       }
     } catch {

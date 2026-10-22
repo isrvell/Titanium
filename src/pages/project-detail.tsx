@@ -29,17 +29,12 @@ export function ProjectDetailPage() {
   const loadData = useCallback(async () => {
     if (!projectId) return;
     try {
-      const [taskData, taskDetail] = await Promise.all([
-        api.get<BoardTask[]>(`/tasks?projectId=${projectId}`),
-        api.get<TaskData>(`/tasks/${projectId}`).catch(() => null),
-      ]);
-      setTasks(taskData);
-      // Get project info from first task or fetch separately
-      if (taskData[0]?.project) {
-        setProject(taskData[0].project);
-      } else if (taskDetail?.project) {
-        setProject(taskDetail.project);
-      }
+      // C-SERVER FIX: single round trip via /projects/detail/:projectId
+      const data = await api.get<{ project: Project; tasks: BoardTask[] }>(
+        `/projects/detail/${projectId}`,
+      );
+      setProject(data.project);
+      setTasks(data.tasks);
     } catch {
       setTasks([]);
     } finally {
@@ -49,9 +44,32 @@ export function ProjectDetailPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // PERSIST FIX (Phase 1.2): persist the drag through the real /tasks/reorder endpoint
   async function handleTaskMove(taskId: string, newStatus: Status, newIndex: number) {
+    // Optimistically move the task in our local list, matching the board logic
+    const next = tasks
+      .filter((t) => t.id !== taskId)
+      .map((t) => (t.id === taskId ? { ...t, status: newStatus } : t));
+
+    const columnTasks = next.filter((t) => t.status === newStatus);
+    const moved = next.find((t) => t.id === taskId) ??
+      tasks.find((t) => t.id === taskId);
+    if (moved) {
+      columnTasks.splice(newIndex, 0, moved);
+    } else {
+      columnTasks.push({ id: taskId, status: newStatus } as BoardTask);
+    }
+
+    setTasks(next.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)));
+
     try {
-      await api.patch(`/tasks/${taskId}`, { status: newStatus, position: newIndex });
+      await api.post("/tasks/reorder", {
+        tasks: columnTasks.map((t, position) => ({
+          id: t.id,
+          position,
+          status: newStatus,
+        })),
+      });
     } catch {
       loadData();
     }

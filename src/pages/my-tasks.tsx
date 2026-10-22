@@ -22,7 +22,7 @@ export function MyTasksPage() {
     if (!workspace || !session?.user) return;
     try {
       const data = await api.get<BoardTask[]>(
-        `/tasks?assigneeId=${session.user.id}`,
+        `/tasks?assigneeId=${session.user.id}&workspaceId=${workspace.id}`,
       );
       setTasks(data);
     } catch {
@@ -35,8 +35,23 @@ export function MyTasksPage() {
   useEffect(() => { loadTasks(); }, [loadTasks]);
 
   async function handleTaskMove(taskId: string, newStatus: Status, newIndex: number) {
+    // PERSIST FIX (Phase 1.2): rebuild the affected column and use the reorder endpoint
+    const moved = tasks.find((t) => t.id === taskId);
+    const columnTasks = tasks
+      .filter((t) => t.id !== taskId && t.status === newStatus);
+    if (moved) columnTasks.splice(newIndex, 0, { ...moved, status: newStatus });
+
+    setTasks((prev) => {
+      const col = prev.filter((t) => t.id !== taskId && t.status === newStatus);
+      if (moved) col.splice(newIndex, 0, { ...moved, status: newStatus });
+      const others = prev.filter((t) => t.status !== newStatus);
+      return [...others, ...col];
+    });
+
     try {
-      await api.patch(`/tasks/${taskId}`, { status: newStatus, position: newIndex });
+      await api.post("/tasks/reorder", {
+        tasks: columnTasks.map((t, position) => ({ id: t.id, position, status: newStatus })),
+      });
     } catch {
       loadTasks();
     }

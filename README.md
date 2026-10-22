@@ -1,12 +1,20 @@
 # Gr8r Studio
 
-A calm, structured project management workspace: home dashboard, inbox, my tasks, projects with
-board / list / table / calendar / timeline / files views, members, teams, activity and settings.
+A calm, structured project management workspace: dashboards, inbox, my tasks, projects with
+kanban / list / calendar / timeline views, members & invitations, tags, comments, notifications,
+activity feed, favorites and full-text search.
 
-Built with plain JavaScript ES modules and CSS, bundled by [Vite](https://vite.dev). There is no
-UI framework and no runtime dependency.
+Built with **React + TypeScript + Tailwind CSS** on the frontend (shadcn-style components) and
+**Hono + Prisma + PostgreSQL** on the backend. Authentication by Better Auth (email + password).
 
-![Gr8r Studio home dashboard](docs/preview.png)
+## Stack
+
+| Layer     | Tech                                                |
+| --------- | --------------------------------------------------- |
+| Frontend  | React 19, TypeScript, Tailwind CSS 4, Vite          |
+| Backend   | Hono, Zod validation, Prisma ORM                    |
+| Database  | PostgreSQL (Neon in production)                     |
+| Auth      | Better Auth (credentials provider)                  |
 
 ## Getting started
 
@@ -14,69 +22,72 @@ Requires Node.js 18 or newer (`.nvmrc` pins 22).
 
 ```bash
 npm install
-npm run dev       # http://localhost:5173 with hot reload
-npm run build     # production build in dist/
-npm run preview   # serve the production build locally
-npm run lint      # ESLint
-npm run format    # Prettier
+cp .env.example .env        # configure DATABASE_URL + secrets
+npx prisma generate
+npm run dev:server          # API on http://localhost:3000
+npm run dev                 # web app on http://localhost:5173
+npm run build               # production frontend build in dist/
+npm run lint                # ESLint (flat config)
 ```
+
+### Environment variables
+
+| Variable        | Used by  | Purpose                                  |
+| --------------- | -------- | ---------------------------------------- |
+| `DATABASE_URL`  | server   | PostgreSQL connection string             |
+| `BETTER_AUTH_SECRET` | server | Session signing secret             |
+| `FRONTEND_URL`  | server   | CORS origin for the web build            |
+| `VITE_API_URL`  | frontend | API base URL (default `http://localhost:3000`) |
+
+### Database
+
+```bash
+npm run db:push      # sync schema.prisma to the database (no migration files)
+npm run db:generate  # regenerate the Prisma client
+npm run db:studio    # browse data
+```
+
+> Prisma 7 reads its configuration from `prisma.config.ts` — plain `prisma` CLI commands work
+> out of the box; `--skip-generate` style flags are no longer supported.
 
 ## Project structure
 
 ```
-index.html              HTML entry; loads src/main.js
-public/favicon.svg      brand mark
-vite.config.js          Vite config, including the Lucide icon-subset plugin
-eslint.config.js        lint rules (ESLint flat config); formatting by Prettier (.prettierrc.json)
-.github/workflows/      CI: lint, format check, build
-docs/preview.png        README screenshot
+server/                 Hono API (auth, workspaces, projects, tasks, comments, tags, notifications, activity)
+server/lib/activity.ts  fire-and-forget activity log + notification fan-out
 src/
-  main.js               entry: imports styles and modules, then boots the app
-  styles/
-    index.css           imports every stylesheet in cascade order
-    tokens.css          colours, spacing, type, radius, the shared --gutter
-    base.css  components.css  shell.css  panels.css  overlays.css  states.css  motion.css  responsive.css
-    views/              list, board, table, calendar, timeline, projects & files
-    pages/              settings, auth & onboarding
-  core/                 utilities, constants, icons, store (state + lookups), theme
-  data/seed.js          demo workspace data
-  ui/                   shared render helpers, toasts, the select dropdown
-  shell/                render loop and router, sidebar/topbar layout, skeletons, view engine
-  components/           task list renderer
-  pages/                one module per route
-  views/                project views: board, table, calendar, timeline, files, overview
-  overlays/             task drawer, modals, popovers, context menu, command palette
-  features/             teams, subtasks, archive (rendering)
-  actions/              user actions, event wiring, keyboard shortcuts, drag and drop
+  app.tsx               router (lazy-loaded pages, guards)
+  layouts/              app shell, sidebar, protected/guest routes
+  pages/                home, overview, inbox, my-tasks, projects, project-detail,
+                        calendar, timeline, search, favorites, notifications,
+                        members, activity, settings, login, signup
+  components/
+    board/              kanban (dnd-kit): board, columns, cards, drag overlay
+    tasks/              task drawer (assignee, due date, tags, comments), status/priority config
+    ui/                 shadcn-style primitives (Button, Card, Dialog, Select, Sheet, …)
+  lib/                  API client, auth client, utils
+  stores/               zustand stores (workspace, theme)
+prisma/schema.prisma    data model (User, Workspace, Member, Project, Task, Comment, Tag, Activity, Notification, Invitation, Favorite)
 ```
 
-### Layers
+## Feature map
 
-Dependencies point downward:
+- **Workspaces** — multiple workspaces, OWNER/ADMIN/MEMBER/VIEWER roles, member removal guards.
+- **Invitations** — email invites; an existing user joins instantly, a new one gets a pending
+  invite consumed automatically at signup (`POST /workspaces/accept-invites`).
+- **Projects** — colors, description, favorites toggle, detail endpoint
+  (`GET /projects/detail/:id`) returning project + tasks in one round trip.
+- **Tasks** — 6 statuses, priorities, assignee, due date, positions; drag & drop persists through
+  `POST /tasks/reorder` (the moved column is rewritten atomically).
+- **Collaboration** — comments (author delete, ADMIN+ moderation), visible tags per workspace,
+  tags attach/detach on tasks.
+- **Notifications & activity** — task watchers are notified on assignment and comment activity;
+  per-workspace activity feed and stats dashboard.
+- **Views** — kanban, list, calendar (month grid), timeline (relative bars), search, favorites,
+  inbox (tasks assigned to me), overview dashboard.
 
-1. `core/` and `data/` depend on nothing else in the app.
-2. `ui/`, `shell/`, `components/`, `pages/`, `views/`, `overlays/` and `features/` render HTML from state.
-3. `actions/` change state and re-render. Each action module registers its handlers on the
-   shared action table (`A`) when it loads, so `main.js` imports them after `actions/actions.js`.
+## Deployment
 
-## Conventions
-
-- **Rendering:** each page or view is a function that returns an HTML string from the store
-  (`S`). `render()` rebuilds the shell and keeps focus and scroll positions.
-- **Interactions:** elements declare `data-a="actionName"`. `actions/events.js` delegates the
-  click to `A.actionName`. Inputs use `data-in`, blur handlers use `data-blur`.
-- **Layout:** every page edge uses `var(--gutter)`, so the breadcrumb, page header, toolbar,
-  list, table and board start on the same line.
-- **Dropdowns:** write a normal `<select class="select">`. `ui/select.js` renders it as the
-  design-system menu and keeps the native element as the source of truth.
-- **Icons:** call `ic('name')` with any [Lucide](https://lucide.dev) icon name. The
-  `virtual:icons` plugin bundles only the icons the source uses.
-
-## Continuous integration
-
-Every push and pull request runs lint, the format check and a production build
-(`.github/workflows/ci.yml`).
-
-## Deploy
-
-`vercel.json` builds with Vite and serves `dist/`.
+- `npm run build` produces a static site (deploy `dist/` to Vercel/Netlify/Cloudflare).
+- Run the API with any Node host (`npm run dev:server` for dev, `tsx server/index.ts` in prod).
+- Set `FRONTEND_URL` so the API sends correct CORS headers to the deployed frontend.

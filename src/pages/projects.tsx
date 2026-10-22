@@ -15,7 +15,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, FolderKanban, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Plus, FolderKanban, MoreHorizontal, Pencil, Trash2, Star } from "lucide-react";
 
 interface Project {
   id: string;
@@ -23,6 +23,7 @@ interface Project {
   description?: string | null;
   color: string;
   status: string;
+  isFavorite: boolean;
   _count: { tasks: number };
   createdAt: string;
 }
@@ -127,6 +128,23 @@ export function ProjectsPage() {
     }
   }
 
+  async function toggleFavorite(project: Project) {
+    // Optimistic toggle
+    setProjects((prev) =>
+      prev.map((p) => (p.id === project.id ? { ...p, isFavorite: !p.isFavorite } : p)),
+    );
+    try {
+      const res = await api.put<{ isFavorite: boolean }>(`/projects/favorite/${project.id}`, {});
+      setProjects((prev) =>
+        prev.map((p) => (p.id === project.id ? { ...p, isFavorite: res.isFavorite } : p)),
+      );
+    } catch {
+      setProjects((prev) =>
+        prev.map((p) => (p.id === project.id ? { ...p, isFavorite: project.isFavorite } : p)),
+      );
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex flex-col gap-4">
@@ -198,8 +216,17 @@ export function ProjectsPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
             <Card key={project.id} className="relative transition-shadow hover:shadow-md">
-              {/* C3 FIX: dropdown menu for edit/delete */}
-              <div className="absolute right-3 top-3">
+              {/* Favorite + dropdown */}
+              <div className="absolute right-3 top-3 flex items-center gap-0.5">
+                <button
+                  onClick={() => toggleFavorite(project)}
+                  className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-amber-400"
+                  aria-label={project.isFavorite ? "Unfavorite" : "Add to favorites"}
+                >
+                  <Star
+                    className={`size-4 ${project.isFavorite ? "fill-amber-400 text-amber-400" : ""}`}
+                  />
+                </button>
                 <DropdownMenu>
                   <DropdownMenuTrigger render={<button className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent" />}>
                     <MoreHorizontal className="size-4" />
@@ -217,7 +244,7 @@ export function ProjectsPage() {
 
               {/* C4 FIX: link to /projects/:id which now has a route */}
               <Link to={`/projects/${project.id}`}>
-                <CardHeader className="flex flex-row items-center gap-3 pb-2 pr-10">
+                <CardHeader className="flex flex-row items-center gap-3 pb-2 pr-16">
                   <div className="size-3 rounded-full shrink-0" style={{ backgroundColor: project.color }} />
                   <CardTitle className="truncate text-base">{project.name}</CardTitle>
                 </CardHeader>

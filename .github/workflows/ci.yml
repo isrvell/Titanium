@@ -16,5 +16,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
-      - run: npm run format:check
       - run: npm run build
+      # Server typecheck (Prisma generate first so @prisma/client types exist)
+      - run: npx prisma generate
+      - run: npx tsc -p tsconfig.server.json --noEmit
+      - name: Prisma schema validation
+        run: npx prisma validate

@@ -26,8 +26,10 @@ model User {
   memberships     WorkspaceMember[]
   assignedTasks   Task[]          @relation("TaskAssignee")
   createdTasks    Task[]          @relation("TaskCreator")
+  favoriteProjects ProjectFavorite[]
   comments        Comment[]
   activities      Activity[]
+  notifications   Notification[]
 
   @@map("users")
 }
@@ -91,6 +93,8 @@ model Workspace {
   projects Project[]
   teams    Team[]
   tags     Tag[]
+  activities Activity[]
+  invitations Invitation[]
 
   @@map("workspaces")
 }
@@ -130,6 +134,7 @@ model Project {
   updatedAt   DateTime  @updatedAt
 
   tasks Task[]
+  favorites ProjectFavorite[]
 
   @@map("projects")
 }
@@ -259,18 +264,73 @@ model Comment {
 // ─── Activity Log ─────────────────────────────────────
 
 model Activity {
-  id        String   @id @default(cuid())
-  action    String
-  entity    String
-  entityId  String
-  meta      Json?
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  taskId    String?
-  task      Task?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
-  createdAt DateTime @default(now())
+  id          String    @id @default(cuid())
+  action      String
+  entity      String
+  entityId    String
+  meta        Json?
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  taskId      String?
+  task        Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
 
+  @@index([workspaceId, createdAt(sort: Desc)])
   @@index([entityId])
   @@index([userId])
   @@map("activities")
+}
+
+// ─── Notifications ────────────────────────────────────
+
+model Notification {
+  id        String    @id @default(cuid())
+  type      String
+  title     String
+  body      String?
+  entityId  String?
+  read      Boolean   @default(false)
+  readAt    DateTime?
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@index([userId, read, createdAt(sort: Desc)])
+  @@map("notifications")
+}
+
+// ─── Project favorites ────────────────────────────────
+
+model ProjectFavorite {
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@id([userId, projectId])
+  @@map("project_favorites")
+}
+
+// ─── Pending invitations (Phase 3) ────────────────────
+
+model Invitation {
+  id          String          @id @default(cuid())
+  email       String
+  role        Role            @default(MEMBER)
+  token       String          @unique @default(cuid())
+  status      InvitationStatus @default(PENDING)
+  workspaceId String
+  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt   DateTime        @default(now())
+
+  @@index([email, status])
+  @@map("invitations")
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  CANCELLED
 }

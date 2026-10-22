@@ -40,6 +40,7 @@ export const updateTaskSchema = createTaskSchema.partial().extend({
 
 export const taskFiltersSchema = z.object({
   projectId: z.string().cuid().optional(),
+  workspaceId: z.string().cuid().optional(),
   status: TaskStatusEnum.optional(),
   priority: PriorityEnum.optional(),
   assigneeId: z.string().cuid().optional(),

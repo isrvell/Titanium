@@ -9,6 +9,8 @@ import { tasks } from "./routes/tasks";
 import { projects } from "./routes/projects";
 import { comments } from "./routes/comments";
 import { workspaces } from "./routes/workspaces";
+import { notifications } from "./routes/notifications";
+import { tags } from "./routes/tags";
 
 const app = new Hono();
 
@@ -40,6 +42,8 @@ api.route("/workspaces", workspaces);
 api.route("/projects", projects);
 api.route("/tasks", tasks);
 api.route("/comments", comments);
+api.route("/notifications", notifications);
+api.route("/tags", tags);
 
 app.route("/api", api);
 

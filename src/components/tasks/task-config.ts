@@ -63,6 +63,25 @@ export interface TaskProject {
   id: string;
   name: string;
   color: string;
+  workspaceId?: string;
+}
+
+export interface TagData {
+  id: string;
+  name: string;
+  color?: string | null;
+}
+
+export interface TaskTag {
+  tag: TagData;
+}
+
+export interface CommentData {
+  id: string;
+  content: string;
+  authorId: string;
+  author?: { id: string; name: string; image?: string | null };
+  createdAt: string;
 }
 
 export interface TaskData {
@@ -74,6 +93,9 @@ export interface TaskData {
   dueDate?: string | null;
   assignee?: TaskAssignee | null;
   project?: TaskProject | null;
+  creatorId?: string;
+  assigneeId?: string | null;
+  tags?: TaskTag[];
   _count: { subtasks: number; comments: number };
   createdAt: string;
 }
