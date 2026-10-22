@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/stores/sidebar";
+import { usePaletteStore } from "@/stores/palette";
 import { NavLink } from "react-router-dom";
 import {
   House,
@@ -77,6 +78,7 @@ function SidebarLink({
 
 export function Sidebar() {
   const { collapsed, toggle } = useSidebarStore();
+  const openPalette = usePaletteStore((s) => s.toggle);
 
   return (
     <aside
@@ -134,7 +136,7 @@ export function Sidebar() {
         {/* Command palette shortcut */}
         {!collapsed && (
           <button
-            onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
+            onClick={openPalette}
             className="mx-2 mb-2 flex items-center gap-2 rounded-md border border-sidebar-border bg-sidebar px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
           >
             <Search className="size-3.5" />

@@ -1,13 +1,8 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { usePaletteStore } from "@/stores/palette";
 import {
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
+  CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator,
 } from "@/components/ui/command";
 import {
   House, Inbox, CircleCheck, Star, Bell, Search,
@@ -35,31 +30,24 @@ const NAV_ITEMS = [
 ];
 
 export function CommandPalette() {
-  const [open, setOpen] = useState(false);
+  const { open, setOpen, toggle } = usePaletteStore();
   const navigate = useNavigate();
   const { setTheme } = useThemeStore();
 
-  // ⌘K / Ctrl+K shortcut
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "k") {
       e.preventDefault();
-      setOpen((prev) => !prev);
+      toggle();
     }
-  }, []);
+  }, [toggle]);
 
   useEffect(() => {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  function runAction(fn: () => void) {
-    fn();
-    setOpen(false);
-  }
-
-  function goTo(path: string) {
-    runAction(() => navigate(path));
-  }
+  function runAction(fn: () => void) { fn(); setOpen(false); }
+  function goTo(path: string) { runAction(() => navigate(path)); }
 
   async function handleSignOut() {
     setOpen(false);
@@ -67,60 +55,39 @@ export function CommandPalette() {
     navigate("/login");
   }
 
-  const navGroups = NAV_ITEMS.reduce(
-    (acc, item) => {
-      const group = acc[item.group] ?? [];
-      group.push(item);
-      acc[item.group] = group;
-      return acc;
-    },
-    {} as Record<string, typeof NAV_ITEMS>,
-  );
+  const navGroups = NAV_ITEMS.reduce((acc, item) => {
+    const group = acc[item.group] ?? [];
+    group.push(item);
+    acc[item.group] = group;
+    return acc;
+  }, {} as Record<string, typeof NAV_ITEMS>);
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
       <CommandInput placeholder="Type a command or search..." />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
-
         {Object.entries(navGroups).map(([group, items]) => (
           <CommandGroup key={group} heading={group}>
             {items.map((item) => {
               const Icon = item.icon;
               return (
                 <CommandItem key={item.to} onSelect={() => goTo(item.to)}>
-                  <Icon />
-                  <span>{item.label}</span>
+                  <Icon /><span>{item.label}</span>
                 </CommandItem>
               );
             })}
           </CommandGroup>
         ))}
-
         <CommandSeparator />
-
         <CommandGroup heading="Theme">
-          <CommandItem onSelect={() => runAction(() => setTheme("light"))}>
-            <Sun />
-            <span>Light mode</span>
-          </CommandItem>
-          <CommandItem onSelect={() => runAction(() => setTheme("dark"))}>
-            <Moon />
-            <span>Dark mode</span>
-          </CommandItem>
-          <CommandItem onSelect={() => runAction(() => setTheme("system"))}>
-            <Settings />
-            <span>System theme</span>
-          </CommandItem>
+          <CommandItem onSelect={() => runAction(() => setTheme("light"))}><Sun /><span>Light mode</span></CommandItem>
+          <CommandItem onSelect={() => runAction(() => setTheme("dark"))}><Moon /><span>Dark mode</span></CommandItem>
+          <CommandItem onSelect={() => runAction(() => setTheme("system"))}><Settings /><span>System theme</span></CommandItem>
         </CommandGroup>
-
         <CommandSeparator />
-
         <CommandGroup heading="Account">
-          <CommandItem onSelect={handleSignOut}>
-            <LogOut />
-            <span>Sign out</span>
-          </CommandItem>
+          <CommandItem onSelect={handleSignOut}><LogOut /><span>Sign out</span></CommandItem>
         </CommandGroup>
       </CommandList>
     </CommandDialog>

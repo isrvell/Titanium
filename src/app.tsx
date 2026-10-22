@@ -3,6 +3,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { AppLayout } from "@/layouts/app-layout";
 import { ProtectedRoute } from "@/layouts/protected-route";
 import { GuestRoute } from "@/layouts/guest-route";
+import { ErrorBoundary } from "@/components/error-boundary";
 import { Spinner } from "@/components/ui/spinner";
 
 // Lazy-loaded pages
@@ -15,6 +16,7 @@ const FavoritesPage = lazy(() => import("@/pages/favorites").then((m) => ({ defa
 const NotificationsPage = lazy(() => import("@/pages/notifications").then((m) => ({ default: m.NotificationsPage })));
 const OverviewPage = lazy(() => import("@/pages/overview").then((m) => ({ default: m.OverviewPage })));
 const ProjectsPage = lazy(() => import("@/pages/projects").then((m) => ({ default: m.ProjectsPage })));
+const ProjectDetailPage = lazy(() => import("@/pages/project-detail").then((m) => ({ default: m.ProjectDetailPage })));
 const TasksPage = lazy(() => import("@/pages/tasks").then((m) => ({ default: m.TasksPage })));
 const CalendarPage = lazy(() => import("@/pages/calendar").then((m) => ({ default: m.CalendarPage })));
 const TimelinePage = lazy(() => import("@/pages/timeline").then((m) => ({ default: m.TimelinePage })));
@@ -22,6 +24,7 @@ const MembersPage = lazy(() => import("@/pages/members").then((m) => ({ default:
 const ActivityPage = lazy(() => import("@/pages/activity").then((m) => ({ default: m.ActivityPage })));
 const SearchPage = lazy(() => import("@/pages/search").then((m) => ({ default: m.SearchPage })));
 const SettingsPage = lazy(() => import("@/pages/settings").then((m) => ({ default: m.SettingsPage })));
+const NotFoundPage = lazy(() => import("@/pages/not-found").then((m) => ({ default: m.NotFoundPage })));
 
 function PageLoader() {
   return (
@@ -31,16 +34,20 @@ function PageLoader() {
   );
 }
 
-function SuspensePage({ children }: { children: React.ReactNode }) {
-  return <Suspense fallback={<PageLoader />}>{children}</Suspense>;
+function S({ children }: { children: React.ReactNode }) {
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={<PageLoader />}>{children}</Suspense>
+    </ErrorBoundary>
+  );
 }
 
 const router = createBrowserRouter([
   {
     element: <GuestRoute />,
     children: [
-      { path: "/login", element: <SuspensePage><LoginPage /></SuspensePage> },
-      { path: "/signup", element: <SuspensePage><SignupPage /></SuspensePage> },
+      { path: "/login", element: <S><LoginPage /></S> },
+      { path: "/signup", element: <S><SignupPage /></S> },
     ],
   },
   {
@@ -49,20 +56,23 @@ const router = createBrowserRouter([
       {
         element: <AppLayout />,
         children: [
-          { path: "/", element: <SuspensePage><HomePage /></SuspensePage> },
-          { path: "/inbox", element: <SuspensePage><InboxPage /></SuspensePage> },
-          { path: "/my-tasks", element: <SuspensePage><MyTasksPage /></SuspensePage> },
-          { path: "/favorites", element: <SuspensePage><FavoritesPage /></SuspensePage> },
-          { path: "/notifications", element: <SuspensePage><NotificationsPage /></SuspensePage> },
-          { path: "/overview", element: <SuspensePage><OverviewPage /></SuspensePage> },
-          { path: "/projects", element: <SuspensePage><ProjectsPage /></SuspensePage> },
-          { path: "/tasks", element: <SuspensePage><TasksPage /></SuspensePage> },
-          { path: "/calendar", element: <SuspensePage><CalendarPage /></SuspensePage> },
-          { path: "/timeline", element: <SuspensePage><TimelinePage /></SuspensePage> },
-          { path: "/members", element: <SuspensePage><MembersPage /></SuspensePage> },
-          { path: "/activity", element: <SuspensePage><ActivityPage /></SuspensePage> },
-          { path: "/search", element: <SuspensePage><SearchPage /></SuspensePage> },
-          { path: "/settings", element: <SuspensePage><SettingsPage /></SuspensePage> },
+          { path: "/", element: <S><HomePage /></S> },
+          { path: "/inbox", element: <S><InboxPage /></S> },
+          { path: "/my-tasks", element: <S><MyTasksPage /></S> },
+          { path: "/favorites", element: <S><FavoritesPage /></S> },
+          { path: "/notifications", element: <S><NotificationsPage /></S> },
+          { path: "/overview", element: <S><OverviewPage /></S> },
+          { path: "/projects", element: <S><ProjectsPage /></S> },
+          { path: "/projects/:projectId", element: <S><ProjectDetailPage /></S> },
+          { path: "/tasks", element: <S><TasksPage /></S> },
+          { path: "/calendar", element: <S><CalendarPage /></S> },
+          { path: "/timeline", element: <S><TimelinePage /></S> },
+          { path: "/members", element: <S><MembersPage /></S> },
+          { path: "/activity", element: <S><ActivityPage /></S> },
+          { path: "/search", element: <S><SearchPage /></S> },
+          { path: "/settings", element: <S><SettingsPage /></S> },
+          // D8 FIX: catch-all 404
+          { path: "*", element: <S><NotFoundPage /></S> },
         ],
       },
     ],

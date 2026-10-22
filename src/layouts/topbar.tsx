@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sun, Moon, Monitor, LogOut, Settings, User } from "lucide-react";
+import { Sun, Moon, Monitor, LogOut, Settings } from "lucide-react";
 import type { Theme } from "@/types";
 
 const THEME_ICONS: Record<Theme, React.ComponentType<{ className?: string }>> = {
@@ -84,10 +84,6 @@ export function Topbar({ title }: { title: string }) {
                 <DropdownMenuItem onClick={() => navigate("/settings")}>
                   <Settings />
                   Settings
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/settings")}>
-                  <User />
-                  Profile
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />

@@ -10,9 +10,12 @@ import { Spinner } from "@/components/ui/spinner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogClose,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
 } from "@/components/ui/dialog";
-import { Plus, FolderKanban } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Plus, FolderKanban, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 
 interface Project {
   id: string;
@@ -33,17 +36,23 @@ export function ProjectsPage() {
   const workspace = useWorkspaceStore((s) => s.active);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newDesc, setNewDesc] = useState("");
-  const [newColor, setNewColor] = useState("#6366f1");
+
+  // C3 FIX: edit dialog state
+  const [editing, setEditing] = useState<Project | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  // Form state (shared for create/edit)
+  const [formName, setFormName] = useState("");
+  const [formDesc, setFormDesc] = useState("");
+  const [formColor, setFormColor] = useState("#6366f1");
 
   const loadProjects = useCallback(async () => {
     if (!workspace) return;
     try {
-      const data = await api.get<Project[]>(`/projects/${workspace.id}`);
-      setProjects(data);
+      setProjects(await api.get<Project[]>(`/projects/${workspace.id}`));
     } catch {
       setProjects([]);
     } finally {
@@ -53,24 +62,68 @@ export function ProjectsPage() {
 
   useEffect(() => { loadProjects(); }, [loadProjects]);
 
-  async function handleCreate() {
-    if (!newName.trim() || !workspace) return;
-    setCreating(true);
+  function openCreate() {
+    setFormName(""); setFormDesc(""); setFormColor("#6366f1");
+    setEditing(null); setError("");
+    setDialogOpen(true);
+  }
+
+  function openEdit(project: Project) {
+    setFormName(project.name);
+    setFormDesc(project.description ?? "");
+    setFormColor(project.color);
+    setEditing(project);
+    setError("");
+    setDialogOpen(true);
+  }
+
+  async function handleSave() {
+    if (!formName.trim() || !workspace) return;
+    setError("");
+
+    if (editing) {
+      // C3 FIX: edit project
+      setSaving(true);
+      try {
+        const updated = await api.patch<Project>(`/projects/${editing.id}`, {
+          name: formName.trim(),
+          description: formDesc.trim() || undefined,
+          color: formColor,
+        });
+        setProjects((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
+        setDialogOpen(false);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to save");
+      } finally {
+        setSaving(false);
+      }
+    } else {
+      // Create
+      setCreating(true);
+      try {
+        const project = await api.post<Project>(`/projects/${workspace.id}`, {
+          name: formName.trim(),
+          description: formDesc.trim() || undefined,
+          color: formColor,
+        });
+        setProjects((prev) => [project, ...prev]);
+        setDialogOpen(false);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to create");
+      } finally {
+        setCreating(false);
+      }
+    }
+  }
+
+  // C3 FIX: delete project
+  async function handleDelete(project: Project) {
+    if (!window.confirm(`Delete "${project.name}" and all its tasks? This cannot be undone.`)) return;
     try {
-      const project = await api.post<Project>(`/projects/${workspace.id}`, {
-        name: newName.trim(),
-        description: newDesc.trim() || undefined,
-        color: newColor,
-      });
-      setProjects((prev) => [project, ...prev]);
-      setNewName("");
-      setNewDesc("");
-      setNewColor("#6366f1");
-      setDialogOpen(false);
+      await api.delete(`/projects/${project.id}`);
+      setProjects((prev) => prev.filter((p) => p.id !== project.id));
     } catch {
-      // handle error
-    } finally {
-      setCreating(false);
+      // Could add toast
     }
   }
 
@@ -94,63 +147,46 @@ export function ProjectsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold tracking-tight">Projects</h2>
+        <Button onClick={openCreate}>
+          <Plus data-icon="inline-start" />
+          New project
+        </Button>
+      </div>
 
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger render={<Button />}>
-            <Plus data-icon="inline-start" />
-            New project
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create project</DialogTitle>
-            </DialogHeader>
-            <div className="flex flex-col gap-4 py-4">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="proj-name">Name</Label>
-                <Input
-                  id="proj-name"
-                  placeholder="e.g. Website Redesign"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  autoFocus
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="proj-desc">Description</Label>
-                <Input
-                  id="proj-desc"
-                  placeholder="Optional description"
-                  value={newDesc}
-                  onChange={(e) => setNewDesc(e.target.value)}
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label>Color</Label>
-                <div className="flex gap-2">
-                  {COLORS.map((c) => (
-                    <button
-                      key={c}
-                      onClick={() => setNewColor(c)}
-                      className="size-7 rounded-full border-2 transition-transform hover:scale-110"
-                      style={{
-                        backgroundColor: c,
-                        borderColor: newColor === c ? "var(--color-foreground)" : "transparent",
-                      }}
-                    />
-                  ))}
-                </div>
+      {/* Create/Edit dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editing ? "Edit project" : "Create project"}</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="proj-name">Name</Label>
+              <Input id="proj-name" placeholder="e.g. Website Redesign" value={formName} onChange={(e) => setFormName(e.target.value)} autoFocus />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="proj-desc">Description</Label>
+              <Input id="proj-desc" placeholder="Optional description" value={formDesc} onChange={(e) => setFormDesc(e.target.value)} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Color</Label>
+              <div className="flex gap-2">
+                {COLORS.map((c) => (
+                  <button key={c} onClick={() => setFormColor(c)} className="size-7 rounded-full border-2 transition-transform hover:scale-110" style={{ backgroundColor: c, borderColor: formColor === c ? "var(--color-foreground)" : "transparent" }} />
+                ))}
               </div>
             </div>
-            <DialogFooter>
-              <DialogClose>Cancel</DialogClose>
-              <Button onClick={handleCreate} disabled={creating || !newName.trim()}>
-                {creating && <Spinner data-icon="inline-start" />}
-                Create
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+          </div>
+          <DialogFooter>
+            <DialogClose>Cancel</DialogClose>
+            <Button onClick={handleSave} disabled={creating || saving || !formName.trim()}>
+              {(creating || saving) && <Spinner data-icon="inline-start" />}
+              {editing ? "Save" : "Create"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {projects.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16">
@@ -161,20 +197,36 @@ export function ProjectsPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
-            <Link key={project.id} to={`/projects/${project.id}`}>
-              <Card className="transition-shadow hover:shadow-md">
-                <CardHeader className="flex flex-row items-center gap-3 pb-2">
+            <Card key={project.id} className="relative transition-shadow hover:shadow-md">
+              {/* C3 FIX: dropdown menu for edit/delete */}
+              <div className="absolute right-3 top-3">
+                <DropdownMenu>
+                  <DropdownMenuTrigger render={<button className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent" />}>
+                    <MoreHorizontal className="size-4" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => openEdit(project)}>
+                      <Pencil /> Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDelete(project)} className="text-destructive">
+                      <Trash2 /> Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {/* C4 FIX: link to /projects/:id which now has a route */}
+              <Link to={`/projects/${project.id}`}>
+                <CardHeader className="flex flex-row items-center gap-3 pb-2 pr-10">
                   <div className="size-3 rounded-full shrink-0" style={{ backgroundColor: project.color }} />
                   <CardTitle className="truncate text-base">{project.name}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {project.description && (
-                    <p className="mb-3 text-sm text-muted-foreground line-clamp-2">{project.description}</p>
-                  )}
+                  {project.description && <p className="mb-3 text-sm text-muted-foreground line-clamp-2">{project.description}</p>}
                   <Badge variant="secondary">{project._count.tasks} tasks</Badge>
                 </CardContent>
-              </Card>
-            </Link>
+              </Link>
+            </Card>
           ))}
         </div>
       )}

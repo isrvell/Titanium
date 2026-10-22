@@ -1,20 +1,15 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
 import { useSession } from "@/lib/auth-client";
 import { useWorkspaceStore } from "@/stores/workspace";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getStatus, type TaskData, type TaskProject } from "@/components/tasks";
 import {
-  ListChecks,
-  CircleDot,
-  CircleCheck,
-  AlertTriangle,
+  ListChecks, CircleDot, CircleCheck, AlertTriangle, ArrowRight,
 } from "lucide-react";
-
-interface TaskRow {
-  status: string;
-  dueDate?: string | null;
-}
 
 interface Stats {
   total: number;
@@ -34,6 +29,8 @@ export function HomePage() {
   const { data: session } = useSession();
   const workspace = useWorkspaceStore((s) => s.active);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [recentTasks, setRecentTasks] = useState<TaskData[]>([]);
+  const [projects, setProjects] = useState<TaskProject[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,21 +39,34 @@ export function HomePage() {
 
     (async () => {
       try {
-        const tasks = await api.get<TaskRow[]>("/tasks");
+        // C6 FIX: load projects for this workspace, then tasks
+        const [tasks, projs] = await Promise.all([
+          api.get<TaskData[]>("/tasks"),
+          api.get<TaskProject[]>(`/projects/${workspace.id}`),
+        ]);
         if (cancelled) return;
+
+        // C6 FIX: only count tasks belonging to this workspace's projects
+        const wsProjectIds = new Set(projs.map((p) => p.id));
+        const wsTasks = tasks.filter((t) => t.project && wsProjectIds.has(t.project.id));
+
         const now = new Date();
         setStats({
-          total: tasks.length,
-          inProgress: tasks.filter((t) => t.status === "IN_PROGRESS").length,
-          completed: tasks.filter((t) => t.status === "DONE").length,
-          overdue: tasks.filter(
-            (t) =>
-              t.dueDate &&
-              new Date(t.dueDate) < now &&
-              t.status !== "DONE" &&
-              t.status !== "CANCELLED",
+          total: wsTasks.length,
+          inProgress: wsTasks.filter((t) => t.status === "IN_PROGRESS").length,
+          completed: wsTasks.filter((t) => t.status === "DONE").length,
+          overdue: wsTasks.filter(
+            (t) => t.dueDate && new Date(t.dueDate) < now && t.status !== "DONE" && t.status !== "CANCELLED",
           ).length,
         });
+
+        // I5 FIX: show recent tasks (last 5, not done)
+        setRecentTasks(
+          wsTasks
+            .filter((t) => t.status !== "DONE" && t.status !== "CANCELLED")
+            .slice(0, 5),
+        );
+        setProjects(projs);
       } catch {
         if (!cancelled) setStats({ total: 0, inProgress: 0, completed: 0, overdue: 0 });
       } finally {
@@ -87,6 +97,7 @@ export function HomePage() {
         </p>
       </div>
 
+      {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {STAT_CARDS.map(({ key, label, icon: Icon, color }) => (
           <Card key={key}>
@@ -105,6 +116,66 @@ export function HomePage() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* I5 FIX: Recent tasks + projects */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Recent tasks */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-base">Recent tasks</CardTitle>
+            <Link to="/tasks" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+              View all <ArrowRight className="size-3" />
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="flex flex-col gap-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-8" />)}</div>
+            ) : recentTasks.length === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">No active tasks</p>
+            ) : (
+              <div className="flex flex-col gap-1">
+                {recentTasks.map((task) => {
+                  const s = getStatus(task.status);
+                  const SIcon = s.icon;
+                  return (
+                    <div key={task.id} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted transition-colors">
+                      <SIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                      <span className="flex-1 truncate text-sm">{task.title}</span>
+                      <Badge variant={s.variant} className="text-[10px]">{s.label}</Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Projects */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-base">Projects</CardTitle>
+            <Link to="/projects" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+              View all <ArrowRight className="size-3" />
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="flex flex-col gap-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-8" />)}</div>
+            ) : projects.length === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">No projects yet</p>
+            ) : (
+              <div className="flex flex-col gap-1">
+                {projects.map((p) => (
+                  <Link key={p.id} to={`/projects/${p.id}`} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted transition-colors">
+                    <div className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
+                    <span className="flex-1 truncate text-sm">{p.name}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -45,8 +45,8 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
 
       create: async (name: string) => {
         const ws = await api.post<Workspace>("/workspaces", { name });
-        const workspaces = [...get().workspaces, { ...ws, role: "OWNER" }];
-        set({ workspaces, active: { ...ws, role: "OWNER" } });
+        const entry = { ...ws, role: "OWNER" };
+        set((state) => ({ workspaces: [...state.workspaces, entry], active: entry }));
         return ws;
       },
     }),
