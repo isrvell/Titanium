@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
+import { useWorkspaceStore } from "@/stores/workspace";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,13 +10,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogTrigger,
-  DialogClose,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogClose,
 } from "@/components/ui/dialog";
 import { Plus, FolderKanban } from "lucide-react";
 
@@ -29,9 +24,13 @@ interface Project {
   createdAt: string;
 }
 
-const WORKSPACE_ID = "placeholder";
+const COLORS = [
+  "#6366f1", "#8b5cf6", "#ec4899", "#ef4444",
+  "#f97316", "#eab308", "#22c55e", "#06b6d4",
+];
 
 export function ProjectsPage() {
+  const workspace = useWorkspaceStore((s) => s.active);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -40,26 +39,25 @@ export function ProjectsPage() {
   const [newDesc, setNewDesc] = useState("");
   const [newColor, setNewColor] = useState("#6366f1");
 
-  useEffect(() => {
-    loadProjects();
-  }, []);
-
-  async function loadProjects() {
+  const loadProjects = useCallback(async () => {
+    if (!workspace) return;
     try {
-      const data = await api.get<Project[]>(`/projects/${WORKSPACE_ID}`);
+      const data = await api.get<Project[]>(`/projects/${workspace.id}`);
       setProjects(data);
     } catch {
       setProjects([]);
     } finally {
       setLoading(false);
     }
-  }
+  }, [workspace]);
+
+  useEffect(() => { loadProjects(); }, [loadProjects]);
 
   async function handleCreate() {
-    if (!newName.trim()) return;
+    if (!newName.trim() || !workspace) return;
     setCreating(true);
     try {
-      const project = await api.post<Project>(`/projects/${WORKSPACE_ID}`, {
+      const project = await api.post<Project>(`/projects/${workspace.id}`, {
         name: newName.trim(),
         description: newDesc.trim() || undefined,
         color: newColor,
@@ -75,11 +73,6 @@ export function ProjectsPage() {
       setCreating(false);
     }
   }
-
-  const COLORS = [
-    "#6366f1", "#8b5cf6", "#ec4899", "#ef4444",
-    "#f97316", "#eab308", "#22c55e", "#06b6d4",
-  ];
 
   if (loading) {
     return (
@@ -171,17 +164,12 @@ export function ProjectsPage() {
             <Link key={project.id} to={`/projects/${project.id}`}>
               <Card className="transition-shadow hover:shadow-md">
                 <CardHeader className="flex flex-row items-center gap-3 pb-2">
-                  <div
-                    className="size-3 rounded-full shrink-0"
-                    style={{ backgroundColor: project.color }}
-                  />
+                  <div className="size-3 rounded-full shrink-0" style={{ backgroundColor: project.color }} />
                   <CardTitle className="truncate text-base">{project.name}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {project.description && (
-                    <p className="mb-3 text-sm text-muted-foreground line-clamp-2">
-                      {project.description}
-                    </p>
+                    <p className="mb-3 text-sm text-muted-foreground line-clamp-2">{project.description}</p>
                   )}
                   <Badge variant="secondary">{project._count.tasks} tasks</Badge>
                 </CardContent>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useSession } from "@/lib/auth-client";
+import { useWorkspaceStore } from "@/stores/workspace";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -9,6 +10,11 @@ import {
   CircleCheck,
   AlertTriangle,
 } from "lucide-react";
+
+interface TaskRow {
+  status: string;
+  dueDate?: string | null;
+}
 
 interface Stats {
   total: number;
@@ -26,30 +32,40 @@ const STAT_CARDS = [
 
 export function HomePage() {
   const { data: session } = useSession();
+  const workspace = useWorkspaceStore((s) => s.active);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadStats() {
+    if (!workspace) return;
+    let cancelled = false;
+
+    (async () => {
       try {
-        const tasks = await api.get<{ status: string; dueDate?: string | null }[]>("/tasks");
+        const tasks = await api.get<TaskRow[]>("/tasks");
+        if (cancelled) return;
         const now = new Date();
         setStats({
           total: tasks.length,
           inProgress: tasks.filter((t) => t.status === "IN_PROGRESS").length,
           completed: tasks.filter((t) => t.status === "DONE").length,
           overdue: tasks.filter(
-            (t) => t.dueDate && new Date(t.dueDate) < now && t.status !== "DONE" && t.status !== "CANCELLED",
+            (t) =>
+              t.dueDate &&
+              new Date(t.dueDate) < now &&
+              t.status !== "DONE" &&
+              t.status !== "CANCELLED",
           ).length,
         });
       } catch {
-        setStats({ total: 0, inProgress: 0, completed: 0, overdue: 0 });
+        if (!cancelled) setStats({ total: 0, inProgress: 0, completed: 0, overdue: 0 });
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
-    }
-    loadStats();
-  }, []);
+    })();
+
+    return () => { cancelled = true; };
+  }, [workspace]);
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -66,7 +82,9 @@ export function HomePage() {
         <h2 className="text-2xl font-semibold tracking-tight">
           {greeting}{firstName ? `, ${firstName}` : ""} 👋
         </h2>
-        <p className="text-muted-foreground">Here&apos;s what&apos;s happening today.</p>
+        <p className="text-muted-foreground">
+          {workspace ? `Workspace: ${workspace.name}` : "Here's what's happening today."}
+        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
