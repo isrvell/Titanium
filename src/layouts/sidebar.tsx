@@ -131,6 +131,18 @@ export function Sidebar() {
         {/* Spacer */}
         <div className="flex-1" />
 
+        {/* Command palette shortcut */}
+        {!collapsed && (
+          <button
+            onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
+            className="mx-2 mb-2 flex items-center gap-2 rounded-md border border-sidebar-border bg-sidebar px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+          >
+            <Search className="size-3.5" />
+            <span className="flex-1 text-left">Search...</span>
+            <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">⌘K</kbd>
+          </button>
+        )}
+
         {/* Bottom items */}
         <div className="flex flex-col gap-0.5 border-t border-sidebar-border pt-2">
           {BOTTOM_ITEMS.map((item) => (

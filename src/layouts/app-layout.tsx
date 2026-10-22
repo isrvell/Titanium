@@ -1,6 +1,7 @@
 import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
+import { CommandPalette } from "@/components/command-palette";
 
 const ROUTE_TITLES: Record<string, string> = {
   "/": "Home",
@@ -32,6 +33,7 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+      <CommandPalette />
     </div>
   );
 }
