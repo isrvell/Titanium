@@ -7,3 +7,7 @@ __MACOSX/
 .env*
 _legacy/
 dist/
+
+# TypeScript build cache
+tsbconfig.tsbuildinfo
+*.tsbuildinfo
