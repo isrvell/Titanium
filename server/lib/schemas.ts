@@ -29,13 +29,29 @@ export const createTaskSchema = z.object({
   status: TaskStatusEnum.optional().default("TODO"),
   priority: PriorityEnum.optional().default("NONE"),
   projectId: z.string().cuid(),
-  assigneeId: z.string().cuid().optional(),
+  assigneeId: z
+    .string()
+    .min(1)
+    .max(64)
+    // NOTE: user IDs come from Better Auth (e.g. "P6tQA8RB0hil4as5PWGmjcifi5BmY3Wa"),
+    // which is NOT a CUID — never validate them with z.string().cuid().
+    .regex(/^[A-Za-z0-9_-]+$/, "Invalid assignee id")
+    .optional(),
   parentId: z.string().cuid().optional(),
   dueDate: z.string().datetime().optional(),
 });
 
 export const updateTaskSchema = createTaskSchema.partial().extend({
   position: z.number().int().min(0).optional(),
+  // Allow null so the drawer can unassign / clear the due date.
+  assigneeId: z
+    .string()
+    .min(1)
+    .max(64)
+    .regex(/^[A-Za-z0-9_-]+$/, "Invalid assignee id")
+    .nullable()
+    .optional(),
+  dueDate: z.string().datetime().nullable().optional(),
 });
 
 export const taskFiltersSchema = z.object({
@@ -43,7 +59,7 @@ export const taskFiltersSchema = z.object({
   workspaceId: z.string().cuid().optional(),
   status: TaskStatusEnum.optional(),
   priority: PriorityEnum.optional(),
-  assigneeId: z.string().cuid().optional(),
+  assigneeId: z.string().min(1).max(64).optional(),
   search: z.string().max(200).optional(),
 });
 
