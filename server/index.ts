@@ -11,6 +11,7 @@ import { comments } from "./routes/comments";
 import { workspaces } from "./routes/workspaces";
 import { notifications } from "./routes/notifications";
 import { tags } from "./routes/tags";
+import { events } from "./routes/events";
 
 const app = new Hono();
 
@@ -49,6 +50,7 @@ const protectedResources: Array<[string, Hono<AuthEnv>]> = [
   ["/comments", comments],
   ["/notifications", notifications],
   ["/tags", tags],
+  ["/events", events],
 ];
 
 for (const [prefix, router] of protectedResources) {

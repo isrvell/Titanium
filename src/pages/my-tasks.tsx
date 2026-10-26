@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { api } from "@/lib/api";
+import { subscribeWorkspaceEvents } from "@/lib/events-client";
 import { useSession } from "@/lib/auth-client";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { KanbanBoard, type BoardTask, type Status } from "@/components/board";
@@ -33,6 +34,19 @@ export function MyTasksPage() {
   }, [workspace, session?.user]);
 
   useEffect(() => { loadTasks(); }, [loadTasks]);
+
+  // LIVE SYNC: refetch my tasks when the server pushes events (debounced)
+  const reloadTimer = useRef<ReturnType<typeof setTimeout>>(null);
+  useEffect(() => {
+    if (!workspace) return;
+    return subscribeWorkspaceEvents(workspace.id, () => {
+      if (reloadTimer.current) return;
+      reloadTimer.current = setTimeout(() => {
+        reloadTimer.current = null;
+        loadTasks();
+      }, 400);
+    });
+  }, [workspace, loadTasks]);
 
   async function handleTaskMove(taskId: string, newStatus: Status, newIndex: number) {
     // PERSIST FIX (Phase 1.2): rebuild the affected column and use the reorder endpoint

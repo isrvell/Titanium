@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { subscribeWorkspaceEvents } from "@/lib/events-client";
 import { useSession } from "@/lib/auth-client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -62,16 +63,27 @@ export function TaskDrawer({ task, onClose, onUpdate, onDelete }: TaskDrawerProp
     })();
   }, [task?.id, task?.project?.workspaceId]);
 
-  // Load comments when the drawer opens
+  // Load comments when the drawer opens + LIVE SYNC: refetch when someone
+  // else adds/deletes a comment on this task (SSE).
   useEffect(() => {
     if (!task) return;
-    (async () => {
+    let stale = false;
+    const load = async () => {
       try {
-        setComments(await api.get<CommentData[]>(`/comments/${task.id}`));
+        const items = await api.get<CommentData[]>(`/comments/${task.id}`);
+        if (!stale) setComments(items);
       } catch {
-        setComments([]);
+        if (!stale) setComments([]);
       }
-    })();
+    };
+    load();
+    const wsId = task.project?.workspaceId;
+    const unsub = wsId
+      ? subscribeWorkspaceEvents(wsId, (event) => {
+          if (event.type === "comments" && (!event.taskId || event.taskId === task.id)) load();
+        })
+      : undefined;
+    return () => { stale = true; unsub?.(); };
   }, [task?.id]);
 
   async function handleUpdate(patch: Record<string, unknown>) {

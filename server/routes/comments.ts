@@ -4,6 +4,7 @@ import { db } from "../lib/db";
 import type { AuthEnv } from "../middleware/auth";
 import { createCommentSchema } from "../lib/schemas";
 import { logActivity, notifyTaskWatchers } from "../lib/activity";
+import { publishEvent } from "../lib/events";
 
 export const comments = new Hono<AuthEnv>()
 
@@ -62,6 +63,7 @@ export const comments = new Hono<AuthEnv>()
       entityId: task.id,
     });
 
+    publishEvent({ workspaceId: task.project.workspaceId, type: "comments", taskId: task.id });
     return c.json(comment, 201);
   })
 
@@ -90,5 +92,10 @@ export const comments = new Hono<AuthEnv>()
       return c.json({ error: "Forbidden" }, 403);
 
     await db.comment.delete({ where: { id: commentId } });
+    publishEvent({
+      workspaceId: comment.task.project.workspaceId,
+      type: "comments",
+      taskId: comment.taskId,
+    });
     return c.json({ ok: true });
   });

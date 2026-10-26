@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api } from "@/lib/api";
+import { subscribeWorkspaceEvents } from "@/lib/events-client";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ interface Project {
   name: string;
   description?: string | null;
   color: string;
+  workspaceId: string;
 }
 
 export function ProjectDetailPage() {
@@ -43,6 +45,19 @@ export function ProjectDetailPage() {
   }, [projectId]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // LIVE SYNC: refetch tasks when the server pushes events (debounced)
+  const reloadTimer = useRef<ReturnType<typeof setTimeout>>(null);
+  useEffect(() => {
+    if (!project?.workspaceId) return;
+    return subscribeWorkspaceEvents(project.workspaceId, () => {
+      if (reloadTimer.current) return;
+      reloadTimer.current = setTimeout(() => {
+        reloadTimer.current = null;
+        loadData();
+      }, 400);
+    });
+  }, [project?.workspaceId, loadData]);
 
   // PERSIST FIX (Phase 1.2): persist the drag through the real /tasks/reorder endpoint
   async function handleTaskMove(taskId: string, newStatus: Status, newIndex: number) {

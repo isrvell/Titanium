@@ -8,6 +8,7 @@ import {
   taskFiltersSchema,
 } from "../lib/schemas";
 import { logActivity, notifyTaskWatchers } from "../lib/activity";
+import { publishEvent } from "../lib/events";
 
 export const tasks = new Hono<AuthEnv>()
 
@@ -122,6 +123,7 @@ export const tasks = new Hono<AuthEnv>()
       });
     }
 
+    publishEvent({ workspaceId: project.workspaceId, type: "tasks", taskId: task.id });
     return c.json(task, 201);
   })
 
@@ -207,6 +209,7 @@ export const tasks = new Hono<AuthEnv>()
         });
       }
 
+      publishEvent({ workspaceId, type: "tasks", taskId });
       return c.json(task);
     },
   )
@@ -242,6 +245,7 @@ export const tasks = new Hono<AuthEnv>()
       entityId: taskId,
     });
 
+    publishEvent({ workspaceId: task.project.workspaceId, type: "tasks", taskId });
     return c.json({ ok: true });
   })
 
@@ -259,6 +263,9 @@ export const tasks = new Hono<AuthEnv>()
         }),
       ),
     );
+
+    const wsId = body.tasks[0] ? await safeWorkspaceId(body.tasks[0].id) : null;
+    if (wsId) publishEvent({ workspaceId: wsId, type: "tasks" });
 
     return c.json({ ok: true });
   });
