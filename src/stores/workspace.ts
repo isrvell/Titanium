@@ -51,7 +51,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       },
     }),
     {
-      name: "gr8r-workspace",
+      name: "titanium-workspace",
       partialize: (s) => ({ active: s.active }),
     },
   ),

@@ -17,7 +17,7 @@ export const useSidebarStore = create<SidebarStore>()(
       setMobileOpen: (open) => set({ mobileOpen: open }),
     }),
     {
-      name: "gr8r-sidebar",
+      name: "titanium-sidebar",
       partialize: (state) => ({ collapsed: state.collapsed }),
     },
   ),

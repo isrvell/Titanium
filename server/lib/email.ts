@@ -16,7 +16,7 @@ export type MailInput = {
 
 function mailFrom(): { name: string; email: string } {
   return {
-    name: process.env.MAIL_FROM_NAME ?? "Gr8r Studio",
+    name: process.env.MAIL_FROM_NAME ?? "Titanium",
     email: process.env.MAIL_FROM_EMAIL ?? "",
   };
 }
@@ -85,21 +85,21 @@ function cta(url: string, label: string): string {
 /** Plain-text version (accessibility + fallback). */
 function toText({ inviterName, workspaceName, role, signupUrl }: Omit<InvitationEmailInput, "to">): string {
   return [
-    `${inviterName} invited you to join "${workspaceName}" as ${role.toLowerCase()} on Gr8r Studio.`,
+    `${inviterName} invited you to join "${workspaceName}" as ${role.toLowerCase()} on Titanium.`,
     "",
     `Create an account or sign in with your invited email address and the workspace will be added automatically:`,
     signupUrl,
     "",
-    "— Gr8r Studio",
+    "— Titanium",
   ].join("\n");
 }
 
 export async function sendInvitationEmail({ to, inviterName, workspaceName, role, signupUrl }: InvitationEmailInput): Promise<"sent" | "skipped" | "failed"> {
-  const subject = `${inviterName} invited you to ${workspaceName} on Gr8r Studio`;
+  const subject = `${inviterName} invited you to ${workspaceName} on Titanium`;
   const html = `<!doctype html><html><body style="margin:0;padding:0;background:#f8fafc;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;">
   <div style="max-width:480px;margin:24px auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;">
     <div style="padding:24px 32px;border-bottom:1px solid #f1f5f9;">
-      <span style="font-weight:700;font-size:18px;color:#0f172a;">Gr8r&nbsp;Studio</span>
+      <span style="font-weight:700;font-size:18px;color:#0f172a;">Titanium</span>
     </div>
     <div style="padding:32px;">
       <h1 style="margin:0 0 12px;font-size:20px;color:#0f172a;">Hi there 👋</h1>
@@ -118,7 +118,7 @@ export async function sendInvitationEmail({ to, inviterName, workspaceName, role
       </p>
     </div>
     <div style="padding:20px 32px;background:#f8fafc;border-top:1px solid #f1f5f9;">
-      <p style="margin:0;color:#94a3b8;font-size:12px;">You are receiving this email because someone invited you to a workspace on Gr8r Studio. If it wasn't you, you can safely ignore it.</p>
+      <p style="margin:0;color:#94a3b8;font-size:12px;">You are receiving this email because someone invited you to a workspace on Titanium. If it wasn't you, you can safely ignore it.</p>
     </div>
   </div>
 </body></html>`;

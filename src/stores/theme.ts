@@ -13,7 +13,7 @@ export const useThemeStore = create<ThemeStore>()(
       theme: "system",
       setTheme: (theme) => set({ theme }),
     }),
-    { name: "gr8r-theme" },
+    { name: "titanium-theme" },
   ),
 );
 

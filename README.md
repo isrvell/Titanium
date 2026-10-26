@@ -1,4 +1,4 @@
-# Gr8r Studio
+# Titanium
 
 A calm, structured project management workspace: dashboards, inbox, my tasks, projects with
 kanban / list / calendar / timeline views, members & invitations, tags, comments, notifications,
@@ -40,7 +40,7 @@ npm run lint                # ESLint (flat config)
 | `VITE_API_URL`  | frontend | API base URL (default `http://localhost:3000`) |
 | `BREVO_API_KEY` | server   | Brevo API key for invitation emails — leave empty to log emails to the API console instead (no crash) |
 | `MAIL_FROM_EMAIL` | server | Verified Brevo sender address (required when `BREVO_API_KEY` is set) |
-| `MAIL_FROM_NAME` | server  | Display name for outgoing emails (default `Gr8r Studio`) |
+| `MAIL_FROM_NAME` | server  | Display name for outgoing emails (default `Titanium`) |
 
 ### Database
 

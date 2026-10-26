@@ -61,7 +61,7 @@ export function SignupPage() {
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-semibold tracking-tight">Create your account</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Start managing projects with Gr8r Studio
+            Start managing projects with Titanium
           </p>
         </div>
 

@@ -25,7 +25,7 @@ const ROUTE_TITLES: Record<string, string> = {
 export function AppLayout() {
   const { pathname } = useLocation();
   const { workspace, loading } = useBootstrap();
-  const title = ROUTE_TITLES[pathname] ?? "Gr8r Studio";
+  const title = ROUTE_TITLES[pathname] ?? "Titanium";
 
   if (loading && !workspace) {
     return (

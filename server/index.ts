@@ -64,7 +64,7 @@ for (const [prefix, router] of protectedResources) {
 const port = parseInt(process.env.PORT ?? "3000", 10);
 
 serve({ fetch: app.fetch, port }, () => {
-  console.log(`🚀 Gr8r API running on http://localhost:${port}`);
+  console.log(`🚀 Titanium API running on http://localhost:${port}`);
 });
 
 export default app;

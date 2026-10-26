@@ -1,9 +1,9 @@
 {
-  "name": "gr8r-studio",
+  "name": "titanium",
   "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "Gr8r Studio: a calm, structured project management workspace.",
+  "description": "Titanium: a calm, structured project management workspace.",
   "scripts": {
     "dev": "vite",
     "dev:server": "tsx watch server/index.ts",

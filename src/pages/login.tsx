@@ -49,7 +49,7 @@ export function LoginPage() {
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Sign in to your Gr8r Studio workspace
+            Sign in to your Titanium workspace
           </p>
         </div>
 

@@ -91,7 +91,7 @@ export function Sidebar() {
       <div className="flex items-center gap-3 border-b border-sidebar-border px-3 py-3">
         {!collapsed && (
           <span className="text-sm font-semibold text-sidebar-foreground truncate">
-            Gr8r Studio
+            Titanium
           </span>
         )}
         <button
