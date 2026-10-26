@@ -5,6 +5,7 @@ import { db } from "../lib/db";
 import type { AuthEnv } from "../middleware/auth";
 import { createWorkspaceSchema, inviteMemberSchema } from "../lib/schemas";
 import { logActivity, notify } from "../lib/activity";
+import { sendInvitationEmail } from "../lib/email";
 
 async function requireMember(userId: string, workspaceId: string) {
   return db.workspaceMember.findUnique({
@@ -183,7 +184,21 @@ export const workspaces = new Hono<AuthEnv>()
       entityId: invitation.id, meta: { email, role },
     });
 
-    return c.json({ kind: "invite" as const, invitation }, 201);
+    // Real email via Brevo (falls back to a console log when BREVO_API_KEY is unset).
+    const actorUser = await db.user.findUnique({
+      where: { id: me },
+      select: { name: true },
+    });
+    const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
+    const emailStatus = await sendInvitationEmail({
+      to: email,
+      inviterName: actorUser?.name ?? "A team member",
+      workspaceName: ws.name,
+      role,
+      signupUrl: `${frontendUrl}/signup`,
+    });
+
+    return c.json({ kind: "invite" as const, invitation, emailSent: emailStatus }, 201);
   })
 
   // List pending invitations

@@ -238,10 +238,22 @@ function InviteDialog({ onDone }: { onDone: () => void }) {
     if (!workspace || !email.trim()) return;
     setSending(true);
     try {
-      await api.post(`/workspaces/${workspace.id}/invitations`, { email: email.trim(), role });
-      toast.success(
-        `Invitation sent to ${email.trim()} — they'll join on first login if they don't have an account yet.`,
+      const res = await api.post<{ kind: "member" | "invite"; emailSent?: string }>(
+        `/workspaces/${workspace.id}/invitations`,
+        { email: email.trim(), role },
       );
+      if (res.kind === "invite") {
+        if (res.emailSent === "sent") {
+          toast.success(`Email invitation sent to ${email.trim()} — they'll join on first login.`);
+        } else if (res.emailSent === "skipped") {
+          // Brevo not configured (no API key) — invitation still created and shown as pending.
+          toast.info(`${email.trim()} added to pending invitations (email sending not configured).`);
+        } else {
+          toast.error(`Invitation saved, but the email could not be delivered to ${email.trim()}.`);
+        }
+      } else {
+        toast.success(`${email.trim()} already has an account — they were added to the workspace.`);
+      }
       setEmail("");
       setRole("MEMBER");
       setOpen(false);

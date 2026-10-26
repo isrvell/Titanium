@@ -36,8 +36,11 @@ npm run lint                # ESLint (flat config)
 | --------------- | -------- | ---------------------------------------- |
 | `DATABASE_URL`  | server   | PostgreSQL connection string             |
 | `BETTER_AUTH_SECRET` | server | Session signing secret             |
-| `FRONTEND_URL`  | server   | CORS origin for the web build            |
+| `FRONTEND_URL`  | server   | CORS origin for the web build + invitation email links |
 | `VITE_API_URL`  | frontend | API base URL (default `http://localhost:3000`) |
+| `BREVO_API_KEY` | server   | Brevo API key for invitation emails — leave empty to log emails to the API console instead (no crash) |
+| `MAIL_FROM_EMAIL` | server | Verified Brevo sender address (required when `BREVO_API_KEY` is set) |
+| `MAIL_FROM_NAME` | server  | Display name for outgoing emails (default `Gr8r Studio`) |
 
 ### Database
 
